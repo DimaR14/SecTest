@@ -1,6 +1,7 @@
 package ua.kiev.prog;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.server.MimeMappings;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,12 +13,24 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Properties;
 
 @Controller
 public class MyController {
+
+    private  String log = "log";
+
     @Autowired
     private UserService userService;
 
@@ -25,7 +38,7 @@ public class MyController {
     private PasswordEncoder passwordEncoder;
 
     @RequestMapping("/")
-    public String index(Model model){
+    public String index(Model model) {
         User user = getCurrentUser();
 
         String login = user.getUsername();
@@ -59,7 +72,7 @@ public class MyController {
                          Model model) {
         String passHash = passwordEncoder.encode(password);
 
-        if ( ! userService.addUser(login, passHash, UserRole.USER, email, phone)) {
+        if (!userService.addUser(login, passHash, UserRole.USER, email, phone)) {
             model.addAttribute("exists", true);
             model.addAttribute("login", login);
             return "register";
@@ -77,32 +90,82 @@ public class MyController {
         return "admin";
     }
 
+    public static void mas(String mail) throws IOException, MessagingException {
+        final Properties properties = new Properties();
+        properties.load(MyController.class.getClassLoader().getResourceAsStream("application.properties"));
+
+        Session mailSession = Session.getDefaultInstance(properties);
+        MimeMessage message = new MimeMessage(mailSession);
+        message.setFrom(new InternetAddress("Home.work.104410@gmail.com"));
+        message.setRecipient(Message.RecipientType.TO, new InternetAddress(mail));
+        message.setSubject("password");
+        message.setText("http://localhost:8078/new_password");
+
+        Transport tr = mailSession.getTransport();
+        tr.connect(null, "homework104410!");
+        tr.sendMessage(message, message.getAllRecipients());
+        tr.close();
+    }
+
+    @RequestMapping(value = "/forgot", method = RequestMethod.POST)
+    public String forgotPassword(@RequestParam String login) throws IOException, MessagingException {
+        CustomUser user = userService.findByLogin(login);
+        this.log = user.getLogin();
+        if (user.getEmail().equals("")) {
+            return "new_mail";
+        }
+        mas(user.getEmail());
+        return "check_mail";
+    }
+
+    @RequestMapping(value = "/mail", method = RequestMethod.POST)
+    public String newMail(@RequestParam String mail) throws IOException, MessagingException {
+        String log1 = log;
+        userService.newMail(log1, mail);
+        mas(mail);
+        return "check_mail";
+    }
+
     @RequestMapping(value = "/newpassword", method = RequestMethod.POST)
-    public String newPassword(@RequestParam String login,
-                                @RequestParam String password){
-        List<CustomUser> list =userService.getAllUsers();
+    public String newPassword(@RequestParam String password) {
+        List<CustomUser> list = userService.getAllUsers();
         List<String> loglist = new ArrayList<>();
-        for(CustomUser u : list){
+        for (CustomUser u : list) {
             loglist.add(u.getLogin());
         }
         int x = 0;
-        for(String log : loglist){
-            if(log.equals(login)){
-                x= x+1;
+        for (String log1 : loglist) {
+            if (log1.equals(log)) {
+                x = x + 1;
             }
         }
-        if(x==0){
+        if (x == 0) {
             return "redirect:/login?error";
         }
         String passHash = passwordEncoder.encode(password);
-        CustomUser user = userService.findByLogin(login);
-        userService.newPassword(login,passHash);
+        CustomUser user = userService.findByLogin(log);
+        userService.newPassword(user.getLogin(), passHash);
         return "redirect:/";
     }
 
     @RequestMapping("/login")
     public String loginPage() {
         return "login";
+    }
+
+    @RequestMapping("/check_mail")
+    public String checkMailPage() {
+        return "check_mail";
+    }
+
+    @RequestMapping("/forgot")
+    public String forgotPage() {
+        return "forgot";
+    }
+
+    @RequestMapping("new_mail")
+    public String newMailPage() {
+        return "new_mail";
     }
 
     @RequestMapping("/new_password")
@@ -123,8 +186,8 @@ public class MyController {
     }
 
     @RequestMapping("/unauthorized")
-    public String unauthorized(Model model){
-        User user = (User)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    public String unauthorized(Model model) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         model.addAttribute("login", user.getUsername());
         return "unauthorized";
     }
@@ -132,11 +195,12 @@ public class MyController {
     // ----
 
     private User getCurrentUser() {
-        return (User)SecurityContextHolder
+        return (User) SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getPrincipal();
     }
+
 
     private boolean isAdmin(User user) {
         Collection<GrantedAuthority> roles = user.getAuthorities();

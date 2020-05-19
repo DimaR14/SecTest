@@ -6,10 +6,10 @@
 </head>
 <body>
 <div align="center">
-    <c:url value="/newpassword" var="newUrl" />
-    <form  role="form"  action="${newUrl}" method="POST">
-        <h3>Enter new password</h3>
-        password:<br/><input type="password" name="password"><br/>
+    <c:url value="/forgot" var="forgotUrl" />
+    <form  role="form"  action="${forgotUrl}" method="POST">
+        <h3>Enter your login</h3>
+        Login:<br/><input type="text" name="login"><br/>
         <input type="submit" />
 
         <c:if test="${param.error ne null}">

@@ -14,7 +14,7 @@
             <input type="submit" />
 
             <p><a href="/register">Register new user</a></p>
-            <p><a href="/new_password">Forgot password</a></p>
+            <p><a href="/forgot">Forgot password</a></p>
 
             <c:if test="${param.error ne null}">
                 <p>Wrong login or password!</p>

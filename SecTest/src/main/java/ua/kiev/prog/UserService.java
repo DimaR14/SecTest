@@ -69,4 +69,14 @@ public class UserService {
        user.setPassword(password);
        userRepository.save(user);
     }
+
+    @Transactional
+    public void newMail(String login, String mail){
+        CustomUser user = userRepository.findByLogin(login);
+        if(user == null)
+            return;
+
+        user.setEmail(mail);
+        userRepository.save(user);
+    }
 }

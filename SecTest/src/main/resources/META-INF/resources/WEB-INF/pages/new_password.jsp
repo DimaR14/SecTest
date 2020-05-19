@@ -8,8 +8,8 @@
 <div align="center">
     <c:url value="/newpassword" var="newUrl" />
     <form  role="form"  action="${newUrl}" method="POST">
-        Login:<br/><input type="text" name="login"><br/>
-        Enter new password:<br/><input type="password" name="password"><br/>
+        <h3>Enter new password</h3>
+        password:<br/><input type="password" name="password"><br/>
         <input type="submit" />
 
         <c:if test="${param.error ne null}">
